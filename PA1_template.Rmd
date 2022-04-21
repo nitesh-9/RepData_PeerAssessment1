@@ -1,25 +1,137 @@
 ---
 title: "Reproducible Research: Peer Assessment 1"
 output: 
-  html_document:
-    keep_md: true
+    html_document:
+        keep_md: true
 ---
 
 
-## Loading and preprocessing the data
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
+```
 
+
+## Loading and preprocessing the data
+```{r}
+# read data
+if (!file.exists("activity.csv")) {
+  unzip("activity.zip")
+}
+
+
+data<- read.csv("activity.csv")
+
+summary(data)
+
+#Remove any NA's within the Data
+data2 <- na.omit(data)
+
+#Change date column into date format
+data2$date <- as.Date(data2$date)
+
+
+summary(data2)
+```
 
 
 ## What is mean total number of steps taken per day?
 
+```{r}
+
+data3 <- aggregate(steps ~ date, data2, sum)
+hist(data3$steps
+     ,breaks = "Sturges"
+     , xlab = "Number of Steps"
+     , main = "Histogram of Daily Number of Steps"
+     ,col = "light blue")
+    
+mean(data3$steps)
+median(data3$steps)
+
+```
+
+The mean number of steps per day = `r round(mean(data3$steps))`
+
+The median number of steps per day = `r median(data3$steps)`
 
 
 ## What is the average daily activity pattern?
 
+```{r}
+#The average number of steps per interval
+stepsbyint <- aggregate(steps ~ interval, data2, mean)
 
+plot(stepsbyint$interval
+     , stepsbyint$steps
+     , type ="l"
+     , col = "dark blue"
+     , ylab = "Number of Steps"
+     , xlab = "Interval"
+     , main = "Average Number of Steps by Interval")
+
+stepsbyint$interval[which.max(stepsbyint$steps)]
+round(stepsbyint$steps[which.max(stepsbyint$steps)])
+
+
+```
+The interval which contains the max number of steps = `r stepsbyint$interval[which.max(stepsbyint$steps)]` with `r round(stepsbyint$steps[which.max(stepsbyint$steps)])` steps
 
 ## Imputing missing values
 
+```{r}
+sum(is.na(data))
 
+```
+The number of NA's in the original data set = `r sum(is.na(data))`
+
+Replacing the NA's with the mean number of steps
+
+```{r}
+data4 <- data
+data4$date <- as.Date(data4$date)
+#Replace the NA's with mean number of steps
+data4$steps[is.na(data4$steps)] <- mean(stepsbyint$steps)
+
+summary(data4)
+summary(data)
+
+```
+
+Comparing the summaries, it can be seen that the NA's have been removed
+
+Histogram with imputed values:
+
+```{r}
+data5 <- aggregate(steps ~ date, data4, sum)
+hist(data5$steps
+     ,breaks = "Sturges"
+     , xlab = "Number of Steps"
+     , main = "Histogram of Daily Number of Steps"
+     ,col = "light blue")
+
+```
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+Separating the data into weekends and weekdays:
+
+```{r}
+
+day <- weekdays(data4$date)
+daytype <- ifelse(day == "Saturday" | day == "Sunday", "Weekend", "Weekday")
+data6 <- cbind(daytype, data4)
+
+#Plot to show weekday vs weekend steps
+
+stepsbydaytype <- aggregate(steps ~ interval + daytype, data6, mean)
+
+library(ggplot2)
+
+ggplot(stepsbydaytype, aes(interval, steps)) +
+    geom_line(stat = "identity", aes(colour = daytype)) +
+    facet_grid(daytype ~ ., scales="fixed", space="fixed")
+        
+     
+     
+
+```
